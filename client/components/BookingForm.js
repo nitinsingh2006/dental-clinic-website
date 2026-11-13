@@ -39,7 +39,7 @@ export default function BookingForm() {
   const [success, setSuccess] = useState(false);
   const [serverError, setServerError] = useState("");
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = new Date().toLocaleDateString("en-CA");
 
   function handleChange(e) {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -54,7 +54,7 @@ export default function BookingForm() {
     const result = bookingSchema.safeParse(form);
     if (!result.success) {
       const fieldErrors = {};
-      result.error.errors.forEach((err) => {
+      result.error.issues.forEach((err) => {
         fieldErrors[err.path[0]] = err.message;
       });
       setErrors(fieldErrors);

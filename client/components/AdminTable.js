@@ -4,6 +4,14 @@ import { useState, useEffect } from "react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
+function authFetch(url, options = {}) {
+  const token = sessionStorage.getItem("adminToken") || "";
+  return fetch(url, {
+    ...options,
+    headers: { ...(options.headers || {}), "x-admin-token": token },
+  });
+}
+
 const doctors = ["Dr. Sarah Patel", "Dr. James Okafor", "Dr. Meera Nair", "Dr. Tom Chen"];
 const timeSlots = [
   "10:00 AM", "11:00 AM", "12:00 PM",
@@ -12,7 +20,7 @@ const timeSlots = [
 ];
 const statuses = ["pending", "confirmed", "completed", "cancelled"];
 
-export default function AdminTable() {
+function AdminPanel({ onLogout }) {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -29,7 +37,11 @@ export default function AdminTable() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`${API_URL}/api/appointments`);
+      const res = await authFetch(`${API_URL}/api/appointments`);
+      if (res.status === 401) {
+        onLogout("Incorrect password or session expired.");
+        return;
+      }
       const data = await res.json();
       if (!res.ok) {
         setError("Failed to load appointments.");
@@ -77,7 +89,7 @@ export default function AdminTable() {
     setSaving(true);
     setEditError("");
     try {
-      const res = await fetch(`${API_URL}/api/appointments/${editing}`, {
+      const res = await authFetch(`${API_URL}/api/appointments/${editing}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(editForm),
@@ -101,7 +113,7 @@ export default function AdminTable() {
     if (!confirmed) return;
 
     try {
-      const res = await fetch(`${API_URL}/api/appointments/${id}`, {
+      const res = await authFetch(`${API_URL}/api/appointments/${id}`, {
         method: "DELETE",
       });
       if (!res.ok) {
@@ -309,4 +321,59 @@ export default function AdminTable() {
       )}
     </div>
   );
+}
+
+export default function AdminTable() {
+  const [token, setToken] = useState(null);
+  const [input, setInput] = useState("");
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    setToken(sessionStorage.getItem("adminToken") || "");
+  }, []);
+
+  function handleLogin(e) {
+    e.preventDefault();
+    const value = input.trim();
+    if (!value) return;
+    sessionStorage.setItem("adminToken", value);
+    setMessage("");
+    setInput("");
+    setToken(value);
+  }
+
+  function handleLogout(msg) {
+    sessionStorage.removeItem("adminToken");
+    setMessage(typeof msg === "string" ? msg : "");
+    setToken("");
+  }
+
+  if (token === null) return null;
+
+  if (!token) {
+    return (
+      <form
+        onSubmit={handleLogin}
+        className="max-w-sm mx-auto bg-white rounded-xl border border-gray-200 shadow-sm p-6 flex flex-col gap-4"
+      >
+        <h2 className="text-lg font-semibold text-gray-800">Admin login</h2>
+        {message && <p className="text-red-500 text-sm">{message}</p>}
+        <input
+          type="password"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="Admin password"
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+        />
+        <button
+          type="submit"
+          className="bg-teal-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-teal-700"
+        >
+          Sign in
+        </button>
+      </form>
+    );
+  }
+
+  return <AdminPanel onLogout={handleLogout} />;
 }
