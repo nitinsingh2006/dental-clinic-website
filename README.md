@@ -1,241 +1,94 @@
 # Dr. Nitin Dental Clinic
 
-A full-stack dental clinic web application that allows patients to book appointments online and provides clinic staff with an admin panel to manage all bookings.
+I built this full-stack web app for a local dental clinic so patients can pick a doctor and book an appointment online, while the clinic staff gets a simple admin page to check, update, or cancel bookings.
 
----
+## Live links
 
-## Tech Stack
+- Frontend: https://dental-clinic-website-topaz-sigma.vercel.app
+- Backend: https://dental-clinic-api-0tmx.onrender.com
 
-| Layer     | Technology                              |
-|-----------|-----------------------------------------|
-| Frontend  | Next.js 14, React 18, Tailwind CSS, Zod |
-| Backend   | Node.js, Express.js                     |
-| Database  | MySQL (via mysql2, plain SQL)           |
-| Styling   | Tailwind CSS                            |
+Note: The backend runs on Render's free tier, so if nobody has opened the site in 15 minutes, the server goes to sleep. The first request might take 30 to 50 seconds to wake up.
 
----
+## What it does
 
-## Folder Structure
+Patients can visit the home page, read through services, and pick a doctor, date, and time slot. The database has a unique constraint on doctor, date, and slot so two people cannot book the same slot.
 
-```
-Dental Clinic Website/
-├── client/                        # Next.js frontend
-│   ├── app/
-│   │   ├── globals.css
-│   │   ├── layout.js
-│   │   ├── page.js                # Home page
-│   │   └── admin/
-│   │       └── page.js            # Admin panel page
-│   ├── components/
-│   │   ├── Navbar.js
-│   │   ├── Hero.js
-│   │   ├── Services.js
-│   │   ├── BookingForm.js
-│   │   ├── Footer.js
-│   │   └── AdminTable.js
-│   ├── jsconfig.json
-│   ├── .env.example
-│   ├── .env.local
-│   ├── next.config.js
-│   ├── tailwind.config.js
-│   ├── postcss.config.js
-│   └── package.json
-│
-├── server/                        # Express.js backend
-│   ├── controllers/
-│   │   └── appointmentController.js
-│   ├── routes/
-│   │   └── appointments.js
-│   ├── db.js
-│   ├── schema.sql
-│   ├── server.js
-│   ├── .env
-│   ├── .env.example
-│   └── package.json
-│
-├── .gitignore
-└── README.md
-```
+The clinic staff can head over to `/admin`, log in with a password, and view all appointments in a table. From there they can change appointment status (pending, confirmed, completed, cancelled), edit details, or delete bookings.
 
----
+## Tech stack
 
-## Running Locally
+- Frontend: Next.js 14 (App Router) + Tailwind CSS + Zod for form validation
+- Backend: Node.js + Express with plain SQL queries via mysql2
+- Database: TiDB Cloud Serverless (MySQL compatible)
+- Hosting: Vercel for the Next.js app, Render for the Express server
 
-### Prerequisites
+## Running locally
 
-- Node.js v18+
-- MySQL 8.x running locally
-- npm
+You need Node.js and a running MySQL instance.
 
----
-
-### 1. MySQL Setup (Linux)
+1. Clone the repo and install dependencies for both sides:
 
 ```bash
-# Install MySQL
-sudo apt install mysql-server
-
-# Start the service
-sudo systemctl start mysql
-sudo systemctl enable mysql
-
-# Log in (no password by default on Ubuntu)
-sudo mysql
-
-# Inside the MySQL shell:
-CREATE DATABASE IF NOT EXISTS dental_clinic;
-# If you want a dedicated user (optional):
-CREATE USER 'dentaluser'@'localhost' IDENTIFIED BY 'yourpassword';
-GRANT ALL PRIVILEGES ON dental_clinic.* TO 'dentaluser'@'localhost';
-FLUSH PRIVILEGES;
-EXIT;
-
-# Optional: run the schema manually (the server also does this automatically on start)
-mysql -u root dental_clinic < server/schema.sql
+cd client && npm install
+cd ../server && npm install
 ```
 
----
+2. Set up the database:
 
-### 2. Backend Setup
+Create a database named `dental_clinic` in MySQL. When you start the server, it automatically runs `CREATE TABLE IF NOT EXISTS appointments` with all columns and the unique slot constraint.
 
-```bash
-cd server
-npm install
+3. Configure environment variables:
+
+In `server/.env`:
 ```
-
-Create a `.env` file in `server/` (or edit the existing one):
-
-```env
 PORT=5000
 FRONTEND_ORIGIN=http://localhost:3000
 DB_HOST=localhost
 DB_PORT=3306
 DB_USER=root
-DB_PASSWORD=
+DB_PASSWORD=your_password
 DB_NAME=dental_clinic
 DB_SSL=false
+ADMIN_TOKEN=your_admin_secret
 ```
 
-Start the backend:
-
-```bash
-# Development (with auto-reload)
-npm run dev
-
-# Production
-npm start
+In `client/.env.local`:
 ```
-
-The server automatically creates the `appointments` table on startup if it doesn't exist. You will see `MySQL connected` in the console.
-
----
-
-### 3. Frontend Setup
-
-```bash
-cd client
-npm install
-```
-
-Create a `.env.local` file in `client/` (or use the existing one):
-
-```env
 NEXT_PUBLIC_API_URL=http://localhost:5000
 ```
 
-Start the frontend:
+4. Start both servers:
 
 ```bash
-npm run dev
+# Terminal 1 (backend)
+cd server && npm start
+
+# Terminal 2 (frontend)
+cd client && npm run dev
 ```
 
-The app will be available at `http://localhost:3000`.
+The site will be live at `http://localhost:3000`.
 
----
+## Production environment variables
 
-## Environment Variables
+For backend on Render:
+- `PORT`: 10000
+- `FRONTEND_ORIGIN`: https://dental-clinic-website-topaz-sigma.vercel.app
+- `DB_HOST`: your remote MySQL or TiDB host
+- `DB_PORT`: 4000 (for TiDB) or 3306
+- `DB_USER`: your remote database user
+- `DB_PASSWORD`: your remote database password
+- `DB_NAME`: dental_clinic
+- `DB_SSL`: true
+- `ADMIN_TOKEN`: secret token used to log into /admin
 
-### Backend (`server/.env`)
+For frontend on Vercel:
+- `NEXT_PUBLIC_API_URL`: https://dental-clinic-api-0tmx.onrender.com
 
-| Variable           | Description                                   | Example                   |
-|--------------------|-----------------------------------------------|---------------------------|
-| `PORT`             | Port for the Express server                   | `5000`                    |
-| `FRONTEND_ORIGIN`  | Allowed CORS origin (your frontend URL)       | `http://localhost:3000`   |
-| `DB_HOST`          | MySQL host                                    | `localhost`               |
-| `DB_PORT`          | MySQL port                                    | `3306`                    |
-| `DB_USER`          | MySQL user                                    | `root`                    |
-| `DB_PASSWORD`      | MySQL password                                | *(empty for local root)*  |
-| `DB_NAME`          | MySQL database name                           | `dental_clinic`           |
-| `DB_SSL`           | Set to `true` for hosted MySQL providers      | `false`                   |
+## Things that annoyed me while building and deploying this
 
-### Frontend (`client/.env.local`)
+1. Hosted MySQL and SSL certificates: On local machine `DB_SSL=false` works fine. But TiDB Cloud and most hosted MySQL providers require SSL/TLS. Setting up `mysql2` to play nice with TLS without failing on self-signed certificate chains took a couple tries until I configured `minVersion: TLSv1.2` and proper flags in `db.js`.
 
-| Variable               | Description                     | Example                      |
-|------------------------|---------------------------------|------------------------------|
-| `NEXT_PUBLIC_API_URL`  | Base URL of the backend API     | `http://localhost:5000`      |
+2. CORS headaches: Because the frontend is hosted on Vercel and the backend on Render, browsers block cross-origin requests unless headers match strictly. Make sure `FRONTEND_ORIGIN` on the server does not have a trailing slash, otherwise Express CORS rejects the origin header sent by Vercel.
 
----
-
-## API Endpoints
-
-| Method | Path                          | Description                         |
-|--------|-------------------------------|-------------------------------------|
-| GET    | `/`                           | Health check — API status message   |
-| POST   | `/api/appointments`           | Create a new appointment            |
-| GET    | `/api/appointments`           | Get all appointments (newest first) |
-| GET    | `/api/appointments/:id`       | Get a single appointment by ID      |
-| PUT    | `/api/appointments/:id`       | Update an appointment by ID         |
-| DELETE | `/api/appointments/:id`       | Delete an appointment by ID         |
-
-### Appointment Object Shape
-
-```json
-{
-  "id": 1,
-  "patientName": "John Doe",
-  "phone": "9876543210",
-  "doctor": "Dr. Sarah Patel",
-  "appointmentDate": "2024-12-15",
-  "timeSlot": "10:00 AM",
-  "status": "pending",
-  "createdAt": "2024-11-13 06:30:00"
-}
-```
-
-**Status values:** `pending` | `confirmed` | `completed` | `cancelled`
-
----
-
-## Live URLs
-
-| Service  | URL                             |
-|----------|---------------------------------|
-| Frontend | *https://your-app.vercel.app*   |
-| Backend  | *https://your-api.onrender.com* |
-
----
-
-## Deployment Notes
-
-### Frontend — Vercel
-
-1. Push the repo to GitHub.
-2. Import the project in [Vercel](https://vercel.com) and set **root directory** to `client/`.
-3. Add the environment variable:
-   - `NEXT_PUBLIC_API_URL` → your Render backend URL (e.g., `https://dental-clinic-api.onrender.com`)
-4. Deploy.
-
-### Backend — Render
-
-1. Create a new **Web Service** on [Render](https://render.com) pointing to the `server/` directory.
-2. Set **Build Command** to `npm install` and **Start Command** to `node server.js`.
-3. Add environment variables:
-   - `FRONTEND_ORIGIN` → your Vercel frontend URL
-   - `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` → from your hosted MySQL provider
-   - `DB_SSL=true` (required for most hosted MySQL providers)
-
-### Database — Free Hosted MySQL
-
-Use [Aiven](https://aiven.io) or [TiDB Cloud](https://tidbcloud.com) for a free hosted MySQL instance.
-Both require SSL — set `DB_SSL=true` in your Render environment variables.
-Copy the host, port, username, password and database name from the provider dashboard into the `DB_*` env vars on Render.
+3. Render cold starts: On Render's free tier, the web service spins down after 15 minutes of inactivity. When you test the site after a break, the booking submission will sit on "Booking..." for almost a minute while Render boots the container.
