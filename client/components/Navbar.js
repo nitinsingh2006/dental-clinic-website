@@ -17,6 +17,7 @@ export default function Navbar() {
         <ul className="hidden md:flex items-center gap-6 text-sm text-gray-600">
           <li><a href="#services" className="hover:text-teal-600">Services</a></li>
           <li><a href="#book" className="hover:text-teal-600">Book Appointment</a></li>
+          <li><a href="#testimonials" className="hover:text-teal-600">Testimonials</a></li>
           <li>
             <Link href="/admin" className="text-teal-600 font-medium hover:underline">
               Admin
@@ -26,8 +27,9 @@ export default function Navbar() {
 
         {/* Mobile hamburger */}
         <button
-          className="md:hidden text-gray-600"
+          className="md:hidden text-gray-600 p-1 focus:outline-none"
           onClick={() => setMenuOpen(!menuOpen)}
+          aria-label="Toggle navigation menu"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             {menuOpen ? (
@@ -42,9 +44,10 @@ export default function Navbar() {
       {/* Mobile menu */}
       {menuOpen && (
         <div className="md:hidden border-t border-gray-100 bg-white px-4 py-3 flex flex-col gap-3 text-sm text-gray-600">
-          <a href="#services" onClick={() => setMenuOpen(false)}>Services</a>
-          <a href="#book" onClick={() => setMenuOpen(false)}>Book Appointment</a>
-          <Link href="/admin" onClick={() => setMenuOpen(false)} className="text-teal-600 font-medium">
+          <a href="#services" onClick={() => setMenuOpen(false)} className="hover:text-teal-600 py-1">Services</a>
+          <a href="#book" onClick={() => setMenuOpen(false)} className="hover:text-teal-600 py-1">Book Appointment</a>
+          <a href="#testimonials" onClick={() => setMenuOpen(false)} className="hover:text-teal-600 py-1">Testimonials</a>
+          <Link href="/admin" onClick={() => setMenuOpen(false)} className="text-teal-600 font-medium py-1">
             Admin
           </Link>
         </div>

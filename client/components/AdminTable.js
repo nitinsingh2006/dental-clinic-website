@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
 function authFetch(url, options = {}) {
-  const token = sessionStorage.getItem("adminToken") || "";
+  const token = typeof window !== "undefined" ? sessionStorage.getItem("adminToken") || "" : "";
   return fetch(url, {
     ...options,
     headers: { ...(options.headers || {}), "x-admin-token": token },
@@ -77,12 +77,16 @@ function AdminPanel({ onLogout }) {
   }
 
   async function handleSave() {
-    if (!editForm.patientName || editForm.patientName.length < 2) {
+    if (!editForm.patientName || editForm.patientName.trim().length < 2) {
       setEditError("Name must be at least 2 characters.");
       return;
     }
     if (!/^\d{10}$/.test(editForm.phone)) {
       setEditError("Phone must be a 10-digit number.");
+      return;
+    }
+    if (!editForm.appointmentDate) {
+      setEditError("Please select a date.");
       return;
     }
 
@@ -140,7 +144,7 @@ function AdminPanel({ onLogout }) {
       cancelled: "bg-red-100 text-red-700",
     };
     return (
-      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${colors[status] || "bg-gray-100 text-gray-600"}`}>
+      <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full capitalize ${colors[status] || "bg-gray-100 text-gray-600"}`}>
         {status}
       </span>
     );
@@ -161,73 +165,146 @@ function AdminPanel({ onLogout }) {
     );
   }
 
-  if (appointments.length === 0) {
-    return (
-      <div className="text-center py-16 text-gray-500">
-        <p>No appointments yet.</p>
-      </div>
-    );
-  }
-
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-gray-800">All Appointments ({appointments.length})</h2>
-        <button onClick={fetchAppointments} className="text-sm text-teal-600 hover:underline">
-          Refresh
-        </button>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-800">
+            All Bookings ({appointments.length})
+          </h2>
+          <p className="text-xs text-gray-500">Manage patient appointments and schedules</p>
+        </div>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={fetchAppointments}
+            className="text-sm text-teal-600 hover:underline font-medium"
+          >
+            Refresh
+          </button>
+          <button
+            onClick={() => onLogout()}
+            className="text-sm text-gray-500 hover:text-red-600 font-medium"
+          >
+            Log out
+          </button>
+        </div>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-gray-200 shadow-sm">
-        <table className="min-w-full text-sm">
-          <thead className="bg-gray-50 text-gray-600 text-left">
-            <tr>
-              <th className="px-4 py-3 font-medium">Patient</th>
-              <th className="px-4 py-3 font-medium">Phone</th>
-              <th className="px-4 py-3 font-medium">Doctor</th>
-              <th className="px-4 py-3 font-medium">Date</th>
-              <th className="px-4 py-3 font-medium">Time</th>
-              <th className="px-4 py-3 font-medium">Status</th>
-              <th className="px-4 py-3 font-medium">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100 bg-white">
+      {appointments.length === 0 ? (
+        <div className="text-center py-16 bg-white rounded-xl border border-gray-200 text-gray-500">
+          <p>No appointments booked yet.</p>
+        </div>
+      ) : (
+        <>
+          {/* Mobile Card Layout (< 768px) */}
+          <div className="block md:hidden space-y-4">
             {appointments.map((a) => (
-              <tr key={a.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3 font-medium text-gray-800">{a.patientName}</td>
-                <td className="px-4 py-3 text-gray-600">{a.phone}</td>
-                <td className="px-4 py-3 text-gray-600">{a.doctor}</td>
-                <td className="px-4 py-3 text-gray-600">{formatDate(a.appointmentDate)}</td>
-                <td className="px-4 py-3 text-gray-600">{a.timeSlot}</td>
-                <td className="px-4 py-3">{statusBadge(a.status)}</td>
-                <td className="px-4 py-3 flex gap-3">
+              <div
+                key={a.id}
+                className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm flex flex-col gap-3"
+              >
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="font-semibold text-gray-900">{a.patientName}</h3>
+                    <p className="text-xs text-gray-500">{a.phone}</p>
+                  </div>
+                  {statusBadge(a.status)}
+                </div>
+
+                <div className="text-xs text-gray-600 grid grid-cols-2 gap-2 bg-gray-50 p-2.5 rounded-lg">
+                  <div>
+                    <span className="text-gray-400 block">Doctor:</span>
+                    <span className="font-medium text-gray-700">{a.doctor}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-400 block">Slot:</span>
+                    <span className="font-medium text-gray-700">{a.timeSlot}</span>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-gray-400 block">Date:</span>
+                    <span className="font-medium text-gray-700">{formatDate(a.appointmentDate)}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-3 pt-1 border-t border-gray-100">
                   <button
                     onClick={() => openEdit(a)}
-                    className="text-teal-600 hover:underline text-xs font-medium"
+                    className="text-xs text-teal-600 hover:underline font-medium px-2 py-1"
                   >
                     Edit
                   </button>
                   <button
                     onClick={() => handleDelete(a.id)}
-                    className="text-red-500 hover:underline text-xs font-medium"
+                    className="text-xs text-red-600 hover:underline font-medium px-2 py-1"
                   >
                     Delete
                   </button>
-                </td>
-              </tr>
+                </div>
+              </div>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </div>
 
-      {/* Edit modal */}
+          {/* Desktop Table View (>= 768px) */}
+          <div className="hidden md:block overflow-x-auto rounded-xl border border-gray-200 shadow-sm bg-white">
+            <table className="min-w-full text-sm divide-y divide-gray-200">
+              <thead className="bg-gray-50 text-gray-600 text-left">
+                <tr>
+                  <th className="px-4 py-3 font-medium whitespace-nowrap">Patient</th>
+                  <th className="px-4 py-3 font-medium whitespace-nowrap">Phone</th>
+                  <th className="px-4 py-3 font-medium whitespace-nowrap">Doctor</th>
+                  <th className="px-4 py-3 font-medium whitespace-nowrap">Date</th>
+                  <th className="px-4 py-3 font-medium whitespace-nowrap">Time Slot</th>
+                  <th className="px-4 py-3 font-medium whitespace-nowrap">Status</th>
+                  <th className="px-4 py-3 font-medium whitespace-nowrap text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 bg-white">
+                {appointments.map((a) => (
+                  <tr key={a.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-4 py-3 font-medium text-gray-800 whitespace-nowrap">
+                      {a.patientName}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{a.phone}</td>
+                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{a.doctor}</td>
+                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
+                      {formatDate(a.appointmentDate)}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{a.timeSlot}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">{statusBadge(a.status)}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-right">
+                      <div className="inline-flex items-center gap-3">
+                        <button
+                          onClick={() => openEdit(a)}
+                          className="text-teal-600 hover:underline text-xs font-medium"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(a.id)}
+                          className="text-red-500 hover:underline text-xs font-medium"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
+      {/* Edit modal - scrollable and safe on all screen heights */}
       {editing && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
-          <div className="bg-white rounded-xl shadow-lg w-full max-w-md p-6">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-lg w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Edit Appointment</h3>
 
             {editError && (
-              <p className="text-red-500 text-sm mb-3">{editError}</p>
+              <p className="text-red-500 text-sm mb-3 bg-red-50 p-2.5 rounded-lg border border-red-200">
+                {editError}
+              </p>
             )}
 
             <div className="flex flex-col gap-4">
@@ -235,7 +312,7 @@ function AdminPanel({ onLogout }) {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Patient Name</label>
                 <input
                   type="text"
-                  value={editForm.patientName}
+                  value={editForm.patientName || ""}
                   onChange={(e) => setEditForm({ ...editForm, patientName: e.target.value })}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
                 />
@@ -245,7 +322,7 @@ function AdminPanel({ onLogout }) {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
                 <input
                   type="text"
-                  value={editForm.phone}
+                  value={editForm.phone || ""}
                   onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
                 />
@@ -254,7 +331,7 @@ function AdminPanel({ onLogout }) {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Doctor</label>
                 <select
-                  value={editForm.doctor}
+                  value={editForm.doctor || ""}
                   onChange={(e) => setEditForm({ ...editForm, doctor: e.target.value })}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 bg-white"
                 >
@@ -268,7 +345,7 @@ function AdminPanel({ onLogout }) {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
                 <input
                   type="date"
-                  value={editForm.appointmentDate}
+                  value={editForm.appointmentDate || ""}
                   onChange={(e) => setEditForm({ ...editForm, appointmentDate: e.target.value })}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
                 />
@@ -277,7 +354,7 @@ function AdminPanel({ onLogout }) {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Time Slot</label>
                 <select
-                  value={editForm.timeSlot}
+                  value={editForm.timeSlot || ""}
                   onChange={(e) => setEditForm({ ...editForm, timeSlot: e.target.value })}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 bg-white"
                 >
@@ -290,9 +367,9 @@ function AdminPanel({ onLogout }) {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
                 <select
-                  value={editForm.status}
+                  value={editForm.status || ""}
                   onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 bg-white"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 bg-white capitalize"
                 >
                   {statuses.map((s) => (
                     <option key={s} value={s}>{s}</option>
@@ -303,12 +380,14 @@ function AdminPanel({ onLogout }) {
 
             <div className="flex gap-3 mt-6 justify-end">
               <button
+                type="button"
                 onClick={closeEdit}
                 className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
               >
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={handleSave}
                 disabled={saving}
                 className="px-4 py-2 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-60"
@@ -356,8 +435,13 @@ export default function AdminTable() {
         onSubmit={handleLogin}
         className="max-w-sm mx-auto bg-white rounded-xl border border-gray-200 shadow-sm p-6 flex flex-col gap-4"
       >
-        <h2 className="text-lg font-semibold text-gray-800">Admin login</h2>
-        {message && <p className="text-red-500 text-sm">{message}</p>}
+        <div>
+          <h2 className="text-lg font-semibold text-gray-800">Admin login</h2>
+          <p className="text-xs text-gray-500 mt-1">Enter your clinic admin password to continue</p>
+        </div>
+        {message && (
+          <p className="text-red-500 text-xs bg-red-50 p-2.5 rounded-lg border border-red-200">{message}</p>
+        )}
         <input
           type="password"
           value={input}
@@ -367,7 +451,7 @@ export default function AdminTable() {
         />
         <button
           type="submit"
-          className="bg-teal-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-teal-700"
+          className="bg-teal-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-teal-700 transition-colors"
         >
           Sign in
         </button>

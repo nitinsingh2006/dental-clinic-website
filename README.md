@@ -11,9 +11,16 @@ Note: The backend runs on Render's free tier, so if nobody has opened the site i
 
 ## What it does
 
-Patients can visit the home page, read through services, and pick a doctor, date, and time slot. The database has a unique constraint on doctor, date, and slot so two people cannot book the same slot.
+The home page is divided into five sections in order:
+1. Hero: quick introduction to the clinic with a direct Book Appointment button that scrolls straight to the booking section.
+2. Services: cards listing checkups, cleanings, root canals, braces, and implants.
+3. Book a Slot: booking form where patients enter their name, phone number, choose a doctor, select an appointment date, and pick an available time slot.
+4. Testimonials: sample reviews displayed for demonstration to give prospective patients an idea of past treatment experiences.
+5. Footer: clinic address in Vijay Nagar, phone number, email, and quick links.
 
-The clinic staff can head over to `/admin`, log in with a password, and view all appointments in a table. From there they can change appointment status (pending, confirmed, completed, cancelled), edit details, or delete bookings.
+The database has a unique constraint on doctor, date, and slot so two people cannot book the same slot.
+
+The clinic staff can head over to `/admin`, log in with a password, and view all appointments. On desktop it shows a full table, and on phones it switches to a card layout so nothing overflows. From there staff can edit patient details, update appointment status (pending, confirmed, completed, cancelled), or delete bookings.
 
 ## Tech stack
 
@@ -21,6 +28,30 @@ The clinic staff can head over to `/admin`, log in with a password, and view all
 - Backend: Node.js + Express with plain SQL queries via mysql2
 - Database: TiDB Cloud Serverless (MySQL compatible)
 - Hosting: Vercel for the Next.js app, Render for the Express server
+
+## Backend API endpoints
+
+All appointment endpoints except POST require the `x-admin-token` header matching the server's `ADMIN_TOKEN`.
+
+- `GET /`
+  Public health check. Returns `{"message": "Dental Clinic API is running"}`.
+
+- `POST /api/appointments`
+  Public endpoint to book an appointment.
+  Body: `{ "patientName": "...", "phone": "...", "doctor": "...", "appointmentDate": "YYYY-MM-DD", "timeSlot": "..." }`
+  Returns the created record (201) or a 409 conflict if that doctor slot is already taken. Rate limited to 10 requests per 15 minutes per IP.
+
+- `GET /api/appointments`
+  Admin only. Returns an array of all appointments sorted by creation date descending.
+
+- `GET /api/appointments/:id`
+  Admin only. Returns a single appointment by its primary key ID.
+
+- `PUT /api/appointments/:id`
+  Admin only. Updates patient name, phone, doctor, appointment date, time slot, and status (`pending`, `confirmed`, `completed`, `cancelled`).
+
+- `DELETE /api/appointments/:id`
+  Admin only. Deletes the booking by ID.
 
 ## Running locally
 
@@ -45,7 +76,7 @@ PORT=5000
 FRONTEND_ORIGIN=http://localhost:3000
 DB_HOST=localhost
 DB_PORT=3306
-DB_USER=root
+DB_USER=your_db_user
 DB_PASSWORD=your_password
 DB_NAME=dental_clinic
 DB_SSL=false
